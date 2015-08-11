@@ -26,7 +26,7 @@ Bechmark method has AUC of 0.8642; the 1st place 0.8696 and 50th place 0.8681.
 
 ##### Things that did not work (yet?)
 1. Additional feature engineering did not result in large change in AUC for the best classifiers (GradientBoostingClassifier and RandomForestClassifier), probably because they were able to learn complex decision boundary. It imporved performace of logistic regression.    
-2. adjusting weigths by class to account for un-balanced data did not help with the performance.  
+2. Adjusting weigths by class to account for un-balanced data did not help with the performance.  
 
 
 ##### Other things to try
@@ -39,16 +39,18 @@ Bechmark method has AUC of 0.8642; the 1st place 0.8696 and 50th place 0.8681.
 
 
 ##### Results of modeling
-Gradient Boosting Classification gave the highest AUC. 
+Gradient Boosting Classification gave the highest AUC.   
+
 ![alt text](/give_me_some_credit/images/roc_gbc.png "ROC")
 
 n_estimators vs. score
-![alt text](https://github.com/joyce-duan/ml_cases/tree/master/give_me_some_credit/images/plot_staged_score_gbc.png "optimzing learning rate")
+
+![alt text](/give_me_some_credit/images/plot_staged_score_gbc.png "optimzing learning rate")
 
 ##### Data insights
 1. feature importance
 
-![alt text](https://github.com/joyce-duan/ml_cases/tree/master/give_me_some_credit/images/feature_importance_gbc.png "feature importance")
+![alt text](/give_me_some_credit/images/feature_importance_gbc.png "feature importance")
 
 2. single variate
 
