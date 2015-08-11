@@ -40,7 +40,7 @@ Bechmark method has AUC of 0.8642; the 1st place 0.8696 and 50th place 0.8681.
 
 ##### Results of modeling
 Gradient Boosting Classification gave the highest AUC. 
-![alt text](https://github.com/joyce-duan/ml_cases/tree/master/give_me_some_credit/images/roc_gbc.png "ROC")
+![alt text](/give_me_some_credit/images/roc_gbc.png "ROC")
 
 n_estimators vs. score
 ![alt text](https://github.com/joyce-duan/ml_cases/tree/master/give_me_some_credit/images/plot_staged_score_gbc.png "optimzing learning rate")
