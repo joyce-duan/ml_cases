@@ -49,6 +49,7 @@ n_estimators vs. score
 
 ##### Data insights 
 1. feature importance 
+
 	![alt text](/give_me_some_credit/images/feature_importance_gbc.png "feature importance")
 
 2. Delinquecy rate: 
@@ -56,8 +57,10 @@ n_estimators vs. score
 	- decreases with age for age over ~25. 
 	- tends to be large for people with 0 credit line or too many credit lines (>20). 
 	- tends to be higher for people who have been more than 60 days late on payment. 
+
 	![plot](/give_me_some_credit/images/uni1.png ) 
-	![plot](/give_me_some_credit/images/uni2.png ) 
+
+	![plot](/give_me_some_credit/images/uni3.png ) 
 
 
 
