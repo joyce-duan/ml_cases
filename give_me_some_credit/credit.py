@@ -322,11 +322,11 @@ def eval_ensemble_average_cv(predictions_test, df, cv, yname, weight, prediction
 	- roc_test: numpy array: n_fold * (n_submodels + 1)
 	- roc_train
 	'''
-	y_tests_all = [] 
+	y_test_all = [] 
 	roc_train = []
 	for train, test in cv:
-		y_tests_all.append(df.iloc[test][yname])
-	y_tests_all = np.array(y_tests_all)
+		y_test_all.append(df.iloc[test][yname])
+	y_test_all = np.array(y_test_all)
 	roc_test = eval_ensemble_kfold(predictions_test, y_test_all, weight)
 
 	if predictions_train is not None:
@@ -334,7 +334,7 @@ def eval_ensemble_average_cv(predictions_test, df, cv, yname, weight, prediction
 		for train, test in cv:
 			y_train_all.append(df.iloc[train][yname])
 		y_train_all = np.array(y_train_all)
-		roc_train = eval_ensemble_kfold(predictions_test, y_test_all, weight)	
+		roc_train = eval_ensemble_kfold(predictions_test, y_train_all, weight)	
 	return roc_test, roc_train	
 
 def eval_ensemble_kfold(y_preds_nfold, y_actual_nfold, weight):
@@ -344,11 +344,11 @@ def eval_ensemble_kfold(y_preds_nfold, y_actual_nfold, weight):
 		- y_actual_nfold: [i]: acutal of fold i
 	'''
 	roc = []
-	for i_fold in xrange(y_preds_nfold.shape[0]):
+	for i_fold in xrange(len(y_preds_nfold)): #.shape[0]):
 		roc.append([])
 		y_actual = y_actual_nfold[i_fold]
 		y_preds = np.array([p[:,1] for p in y_preds_nfold[i_fold]])	
-		w = np.array(weights)
+		w = np.array(weight)
 		y_pred_ensemble = (y_preds.T).dot(w.T)
 		y_pred_ensemble = (y_pred_ensemble - y_pred_ensemble.min())/(y_pred_ensemble.max() - \
 		y_pred_ensemble.min())   		
@@ -508,37 +508,6 @@ def apply_models(weight, models = None, model_names = None):
 	t1 = time.time()
 	print "total time taken taken %.2f minutes " % ( (t1-t00)/60)
 
-def main_run_it_all():
-	cv = 5
-	fname = 'data/credit-training.csv'
-
-	flag_test, n_samples = 0, 0
-	if len(sys.argv) > 1:
-		flag_test = sys.argv[1]
-		n_samples = int(sys.argv[1])
-	df, xnames, yname = get_data(fname, flag_test, n_samples)
-	t0 = time.time()	
-	df = feature_enginerring(df)
-	df = fill_na(df, xnames, v = -1)
-	t1 = time.time() # time it
-	time_taken = (t1-t0)/60	
-	print 'feature engineering', ' finished in ', time_taken, ' minutes'
-
-	print df.shape
-	print df[yname].mean()
-	xnames = df.columns.difference([yname, 'id'])
-	print yname
-	print xnames
-	print df.describe().T
-	print df.dtypes
-
-	#baseline_model_gbc(df, xnames, yname)
-	#baseline_model_rf(df, xnames, yname)
-	#optimize_rf(df, xnames, yname)
-
-	#grid_search = randomized_search(df, xnames, yname)
-	grid_search = randomized_search_gbc(df, xnames, yname)
-
 
 def calibrate_prob(y_true, y_score, bins=10, normalize=False):
 	'''
@@ -633,7 +602,38 @@ def try_calibrate():
 		print("testset score: %f" % score_this_clf)		
 	print np.array(scores_all).mean(axis = 0)
 
-def eval_calibrated_submodles(flagtest = 0):
+def main_test_optmize_submodels():
+	cv = 5
+	fname = 'data/credit-training.csv'
+
+	flag_test, n_samples = 0, 0
+	if len(sys.argv) > 1:
+		flag_test = sys.argv[1]
+		n_samples = int(sys.argv[1])
+	df, xnames, yname = get_data(fname, flag_test, n_samples)
+	t0 = time.time()	
+	df = feature_enginerring(df)
+	df = fill_na(df, xnames, v = -1)
+	t1 = time.time() # time it
+	time_taken = (t1-t0)/60	
+	print 'feature engineering', ' finished in ', time_taken, ' minutes'
+
+	print df.shape
+	print df[yname].mean()
+	xnames = df.columns.difference([yname, 'id'])
+	print yname
+	print xnames
+	print df.describe().T
+	print df.dtypes
+
+	#baseline_model_gbc(df, xnames, yname)
+	#baseline_model_rf(df, xnames, yname)
+	#optimize_rf(df, xnames, yname)
+
+	#grid_search = randomized_search(df, xnames, yname)
+	grid_search = randomized_search_gbc(df, xnames, yname)
+
+def main_eval_calibrated_submodles(flagtest = 0):
 	'''
 	evaluate calibrated submodels using 3 weight scheme: a) same weight; b) top 3; c) optimized weights
 	'''
@@ -643,11 +643,11 @@ def eval_calibrated_submodles(flagtest = 0):
 
 	models, model_names = init_calibrated_submodels()
 	if flagtest == 1:
-		predictions_test, cv = build_ensemble_models(df, xnames, yname, models, model_names, n_folds = 5, cv_pkl=False, warmstart = False, w = None, flag_print = False)
+		predictions_test, cv = build_ensemble_models(df, xnames, yname, models, model_names, n_folds = 3, cv_pkl=False, warmstart = False, w = None, flag_print = False)
 	else:
 		predictions_test, cv = build_ensemble_models(df, xnames, yname, models, model_names, n_folds = 5, cv_pkl=True, warmstart = False, w = None)
 	
-	weights = [0.333,0.0,0.333,0.333]
+	weight = [0.333,0.0,0.333,0.333]
 	eval_ensemble_average_cv(predictions_test, df, cv, yname, weight)
 
 	weight, weights = find_weight_for_ensemble_cv(predictions_test, df, cv, yname)
@@ -668,7 +668,7 @@ if __name__ == '__main__':
 	#baseline_sgdc(df, xnames, yname)
 	#optimize_sgdc()
 
-	eval_calibrated_submodles(flagtest = 1)
+	main_eval_calibrated_submodles(flagtest = 1)
 
 	weight =  [0.38696696,  0.00785644,  0.21191936,  0.39325724]
 	#apply_models(weight, models = None, model_names = None)

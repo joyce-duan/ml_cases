@@ -20,7 +20,8 @@ The training set has 150k data rows, 6.7% positives (default- serious_dlqin2yrs 
 
 2. Coding missing values: -1 for missing income and 0 for missing number of independent. This allows inclusion of all the data and improved AUC of basic random forest model to 0.863 from 0.831.  
 3. Hyper parameter search for GradientBoostingClassifier improved AUC from 0.863 to 0.8661 and for RandomForestClassifier from 0.83 to 0.8682.
-4. Simple avearge of predictions from the best two individual methods had moderate improvement to 0.8686.
+4. Simple avearge of predictions from the three best methods (RandomForestClassifier, AdaBoostClassifier, GradientBoostingClassifier) had moderate improvement to 0.8685. 
+5. Probability calibration using calibration.CalibratedClassifierCV and optmizing weights of submodels by mimimize logloss resulted in minor improvment of AUC to 0.8686.
 
 Bechmark method has AUC of 0.8642; the 1st place 0.8696 and 50th place 0.8681. My final submission had score of 0.8686.
 
