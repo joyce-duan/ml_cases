@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import pickle
+from sklearn.preprocessing import StandardScaler 
 
 from configobj import ConfigObj
 config = ConfigObj('config')
@@ -19,14 +20,26 @@ sys.path.append(ml_home+ 'eda')
 
 import myutil
 import ml_util  
-import features
+import feature_helper
+
+def read_process_samplingdata(fname):
+	'''
+	read in a sampling of the data for quick test run
+	'''
+	df = get_data(fname, flag_test =1, n_samples = None)	
+	df, xnames, yname = pre_process(df)
+	df, scaler = scale_X(df, xnames)
+	return df, xnames, yname
 
 def read_all_data(datafname):
-    df = pd.read_csv(datafname)
-    df.columns = [myutil.camel_to_snake(c) for c in df.columns]
-    print 'original column names:'
-    print df.columns
-    return df
+	'''
+	read in data as is and clean up columen name
+	'''
+	df = pd.read_csv(datafname)
+	df.columns = [myutil.camel_to_snake(c) for c in df.columns]
+	print 'original column names:'
+	print df.columns
+	return df
 
 def rename_columns(df):   
     df.rename(columns={'unnamed: 0':'id'}, inplace=True)
@@ -42,11 +55,14 @@ def rename_columns(df):
     return df, xnames, yname
 
 def pre_process(df):
+	'''
+	rename and feature engineering
+	'''
 	df, xnames, yname = rename_columns(df)
 	df = feature_enginerring(df)
 	xnames = df.columns.difference([yname, 'id'])
 	df = fill_na(df, xnames, v = -1)
-	return df, xnames 
+	return df, xnames, yname
 
 def scale_X(df, xnames):
 	cols_binary = '''
@@ -70,9 +86,30 @@ def scale_X(df, xnames):
 	df[xnames_toscale] = scaler.fit_transform(df[xnames_toscale])
 	return df, scaler
 
+def scale_X_transform(df, xnames, scaler):
+	cols_binary = '''
+	debt_is_0       
+	mon_income_valid         
+	mon_income_is_1         
+	mon_income_is_0             
+	mon_income_is_k     
+	dti_is_int                      
+	dti_is_0                         
+	dti_gt_33                        
+	dti_gt_40                                                        
+	revolv_util_is0                  
+	revolv_util_is1                                   
+	n_90d_late_missing                             
+	n_30-59d_late_missing                         
+	n_60-89d_late_missing                  
+	'''.split()
+	xnames_toscale = xnames.difference(cols_binary)
+	df[xnames_toscale] = scaler.transform(df[xnames_toscale])
+	return df
+
 def get_data(fname, flag_test =0, n_samples = None):
 	'''
-	return df with cleaned column name
+	return df with original column name
 	read in either the raw data or the sample dataset 
 	'''
 	if flag_test:
@@ -87,7 +124,7 @@ def get_data(fname, flag_test =0, n_samples = None):
 			df.to_csv(fname_sample, index = False)
 	else: 
 		df = read_all_data(fname)
-	return rename_columns(df)
+	return df #rename_columns(df)
 
 def feature_enginerring(df_orig):
 	df = df_orig
@@ -141,7 +178,7 @@ def feature_enginerring(df_orig):
 	,'n_house_loans'
 	,'n_dependents'
 	]
-	df_x_capped = features.cap_df(df, cols_tocap, pct = 0.99)
+	df_x_capped = feature_helper.cap_df(df, cols_tocap, pct = 0.99)
 
 	df2 = pd.concat([df, df_x_capped], axis = 1)
 
@@ -178,7 +215,6 @@ def feature_enginerring(df_orig):
 	df2['monthly_disposable'] = df2[['monthly_income_fixed','debt']].apply(lambda x:\
 	                    x[0] - x[1], axis = 1)
 	df2['monthly_disposable'] = np.where(np.any([df2['monthly_income_fixed']==-1, df2['debt']==-1],axis=0), -1, df2['monthly_disposable'] )
-
 	return df2
 
 def fill_na(df, xnames, v = 0):
@@ -186,12 +222,21 @@ def fill_na(df, xnames, v = 0):
 		df[c].fillna(v, inplace=True)
 	return df 
 
-def get_predicted_prob(clf, i, X_train, y_train, X_test, y_test, warmstart = False):
-	fname = 'data/' + clf.__class__.__name__ + '_' + str(i)+'.pkl'
-	fname_train = 'data/'+ clf.__class__.__name__ + '_' + str(i)+'_train.pkl'	
+def get_predicted_prob(clf, i, X_train, y_train, X_test, y_test, warmstart = False, flag_print = True, model_name = None):
+	'''
+	run fit and predict or read in clf from pkl file or train and fit predictions for fold i and clf
+	OUTPUT:
+		probs:  n_data_test, n_classes
+		probs_train: n_data_train, n_classes
+	'''
+	if model_name is None:
+		model_name = clf.__class__.__name__
+	fname = 'data/' +  model_name + '_' + str(i)+'.pkl'
+	fname_train = 'data/'+ model_name + '_' + str(i)+'_train.pkl'	
 	if warmstart is False:
+		print model_name
 		clf.fit(X_train, y_train)
-		if 'Classifier' in clf.__class__.__name__:
+		if 'Classifier' in model_name:
 			probs = clf.predict_proba(X_test)
 			probs_train = clf.predict_proba(X_train)
 		else:
@@ -199,13 +244,13 @@ def get_predicted_prob(clf, i, X_train, y_train, X_test, y_test, warmstart = Fal
 			probs_train = np.zeros((len(y_train),2))				
 			probs[:,1] = clf.predict(X_test).T
 			probs_train[:,1] = clf.predict(X_train).T
-		pickle.dump(probs, open(fname, 'w'))	
-		pickle.dump(probs_train, open(fname_train, 'w'))			
+		if flag_print:
+			pickle.dump(probs, open(fname, 'w'))	
+			pickle.dump(probs_train, open(fname_train, 'w'))			
 	else:
 		probs = pickle.load(open(fname))
 		probs_train = pickle.load(open(fname_train))
 	return probs, probs_train
-
 
 def write_test(probs, fname_out, df = None):
 	with open(fname_out, 'w') as fh_out:
@@ -231,3 +276,76 @@ def get_X_y(df, flag_test, xnames, yname, n_samples = 0):
 	print len(X), len(X[0])
 	return X, y
 
+def make_df_pickle():
+	fname = 'data/credit-training.csv'
+
+	flag_test, n_samples = 0, 0
+	if len(sys.argv) > 1:
+		flag_test = sys.argv[1]
+		n_samples = int(sys.argv[1])
+
+	#df, icol_y, icols_x = read_data(fname)	
+	df, xnames, yname = get_data(fname, flag_test, n_samples)
+	t0 = time.time()	
+	df = feature_enginerring(df)
+	df = fill_na(df, xnames, v = -1)
+	t1 = time.time() # time it
+	time_taken = (t1-t0)/60	
+	print 'feature engineering', ' finished in ', time_taken, ' minutes'
+
+def read_pred_cv(n_folds = 5):
+	'''
+		OUTPUT: 
+			- cv: 
+			- predictions_test: 
+				5-fold-cv, 
+					5-models, 
+						predictions_test[0][1].shape = n_sample, 2  fold 0, model 1
+		for i, (train, test) in enumerate(cv):
+			y_test = df.iloc[test][yname]
+	'''
+	df = None
+	with open('data/df_training.pkl', 'r') as fh_in:  #after pre-processing and feature engineering
+		df = pickle.load(fh_in)
+	cv_fname = 'data/kfold_cv.pkl'
+	cv = pickle.load(open(cv_fname))
+	models = init_all_models()
+	print ','.join(c.__class__.__name__ for c in models)
+	t00 = time.time() # time it		
+	t0 = t00
+	#i = 0
+	X_train, y_train, X_test, y_test = [ None ] * 4
+	predictions_test = []
+	for i, (train, test) in enumerate(cv):
+		predictions_test.append([])
+		if len(train) + len(test) != df.shape[0]:
+			print 'ERROR: K fold and dataset mis-match'
+			return 				
+		for clf in models:
+			probs, probs_train = get_predicted_prob(clf, i, X_train, y_train, X_test, y_test, warmstart = True)
+			predictions_test[i].append(probs)
+			#i = i + 1			
+	return df, cv, predictions_test
+
+def read_pred_submodels():
+	y_test_preds = np.zeros((101503))
+	fnames = ["test_prediction_model_%d.csv" % i for i in xrange(5)]
+	y_test_preds = pd.concat([ pd.read_csv(fname) for fname in fnames], axis = 1).values
+	i = [1,3,5,7,9]
+	return y_test_preds[:, i]
+
+def load_df_from_pkl():
+	df = None
+	with open('data/df_training.pkl', 'r') as fh_in:  #after pre-processing and feature engineering
+		df = pickle.load(fh_in)
+	yname = 'dlqin2yrs' 
+	xnames = df.columns.difference([yname, 'id'])
+	return df, xnames, yname
+
+def read_fitted_calibrated_model():
+	models, model_names = init_calibrated_submodels(n_folds = 5)
+	for i in xrange(len(models)):
+		model_name = model_names[i]
+		with open(model_name + '_clf.pkl', 'r') as fh_in:
+			models[i] = pickle.load(fh_in)	
+	return models, model_names
