@@ -23,7 +23,7 @@ The training set has 150k data rows, 6.7% positives (default- serious_dlqin2yrs 
 4. Simple avearge of predictions from the three best methods (RandomForestClassifier, AdaBoostClassifier, GradientBoostingClassifier) had moderate improvement to 0.8685. 
 5. Probability calibration using calibration.CalibratedClassifierCV and optmizing weights of submodels by mimimize logloss resulted in minor improvment of AUC to 0.8686.
 
-Bechmark method has AUC of 0.8642; the 1st place 0.8696 and 50th place 0.8681. My final submission had score of 0.8686.
+Bechmark method has AUC of 0.8642; the 1st place 0.8696 and 50th place 0.8681. My final submission has score of 0.8686.
 
 ##### Things that did not work (yet?)
 1. Additional feature engineering did not result in large change in AUC for the best classifiers (GradientBoostingClassifier and RandomForestClassifier), probably because these methods were able to learn complex decision boundary. It imporved performace of logistic regression. 
